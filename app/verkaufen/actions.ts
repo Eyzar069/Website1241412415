@@ -3,6 +3,55 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
+export async function getCategories() {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from("categories").select("*").order("display_order", { ascending: true })
+
+  if (error) {
+    console.error("[v0] Error fetching categories:", error)
+    return []
+  }
+
+  return data || []
+}
+
+export async function getBrands() {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from("brands").select("*").order("display_order", { ascending: true })
+
+  if (error) {
+    console.error("[v0] Error fetching brands:", error)
+    return []
+  }
+
+  return data || []
+}
+
+export async function getDevices() {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from("devices").select("*")
+
+  if (error) {
+    console.error("[v0] Error fetching devices:", error)
+    return []
+  }
+
+  console.log("[v0] Fetched devices:", data?.length)
+  return data || []
+}
+
+export async function getDeviceById(id: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from("devices").select("*").eq("id", id).single()
+
+  if (error) {
+    console.error("[v0] Error fetching device:", error)
+    return null
+  }
+
+  return data
+}
+
 export async function addCategory(formData: FormData) {
   const supabase = await createClient()
 

@@ -6031,6 +6031,7 @@ export const MOCK_DEVICES: Device[] = [
 ]
 
 export const CONDITION_MULTIPLIERS: Record<DeviceCondition, number> = {
+  neu: 1.05, // Added "Neu" condition with highest multiplier
   "wie-neu": 1.0,
   "sehr-gut": 0.85,
   gut: 0.7,
@@ -6039,6 +6040,7 @@ export const CONDITION_MULTIPLIERS: Record<DeviceCondition, number> = {
 }
 
 export const CONDITION_LABELS: Record<DeviceCondition, string> = {
+  neu: "Neu", // Added "Neu" label
   "wie-neu": "Wie Neu",
   "sehr-gut": "Sehr Gut",
   gut: "Gut",

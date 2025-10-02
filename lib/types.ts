@@ -10,7 +10,7 @@ export type DeviceCategory =
   | "headphones"
   | "other"
 
-export type DeviceCondition = "wie-neu" | "sehr-gut" | "gut" | "akzeptabel" | "defekt"
+export type DeviceCondition = "neu" | "wie-neu" | "sehr-gut" | "gut" | "akzeptabel" | "defekt"
 
 export type OrderStatus =
   | "quote-created"

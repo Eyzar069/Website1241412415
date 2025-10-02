@@ -9,9 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit2, Trash2, Search, ArrowLeft, ImageIcon } from "lucide-react"
+import { Plus, Edit2, Trash2, Search, ArrowLeft, ImageIcon, X, Check } from "lucide-react"
 import { getDevicesPaginated } from "./actions"
 import { createProduct, updateProduct, deleteProduct, getAllCategories, getAllBrands } from "./actions"
 import Link from "next/link"
@@ -24,6 +23,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface Device {
   id: string
@@ -68,6 +68,12 @@ export default function ProduktePage() {
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
+  const [formBrand, setFormBrand] = useState<string>("")
+  const [formCategory, setFormCategory] = useState<string>("")
+
+  const [editingRowId, setEditingRowId] = useState<string | null>(null)
+  const [editingRowData, setEditingRowData] = useState<Partial<Device>>({})
+
   useEffect(() => {
     loadData()
   }, [currentPage, searchQuery, categoryFilter, brandFilter, yearFilter])
@@ -107,13 +113,25 @@ export default function ProduktePage() {
     e.preventDefault()
     setSaving(true)
 
+    console.log("[v0] Form submission started")
+    console.log("[v0] Editing device:", editingDevice)
+
     const formData = new FormData(e.currentTarget)
+
+    console.log("[v0] Form data entries:")
+    for (const [key, value] of formData.entries()) {
+      console.log(`[v0]   ${key}:`, value)
+    }
 
     let result
     if (editingDevice) {
+      console.log("[v0] Calling updateProduct with ID:", editingDevice.id)
       result = await updateProduct(editingDevice.id, formData)
+      console.log("[v0] Update result:", result)
     } else {
+      console.log("[v0] Calling createProduct")
       result = await createProduct(formData)
+      console.log("[v0] Create result:", result)
     }
 
     if (result.success) {
@@ -121,10 +139,14 @@ export default function ProduktePage() {
         title: editingDevice ? "Produkt aktualisiert" : "Produkt erstellt",
         description: `${formData.get("brand")} ${formData.get("model")} wurde erfolgreich ${editingDevice ? "aktualisiert" : "erstellt"}.`,
       })
+      console.log("[v0] Reloading data after successful operation")
       await loadData()
       setIsCreateOpen(false)
       setEditingDevice(null)
+      setFormBrand("")
+      setFormCategory("")
     } else {
+      console.error("[v0] Operation failed:", result.error)
       toast({
         title: "Fehler",
         description: result.error,
@@ -155,13 +177,81 @@ export default function ProduktePage() {
   }
 
   const handleEdit = (device: Device) => {
+    console.log("[v0] Edit button clicked for device:", device)
     setEditingDevice(device)
+    setFormBrand(device.brand)
+    setFormCategory(device.category)
     setIsCreateOpen(true)
   }
 
   const handleCloseDialog = () => {
     setIsCreateOpen(false)
     setEditingDevice(null)
+    setFormBrand("")
+    setFormCategory("")
+  }
+
+  const handleInlineEdit = (device: Device) => {
+    console.log("[v0] Starting inline edit for device:", device)
+    setEditingRowId(device.id)
+    setEditingRowData({
+      brand: device.brand,
+      model: device.model,
+      variant: device.variant,
+      category: device.category,
+      base_price: device.base_price,
+      release_year: device.release_year,
+    })
+  }
+
+  const handleCancelInlineEdit = () => {
+    console.log("[v0] Canceling inline edit")
+    setEditingRowId(null)
+    setEditingRowData({})
+  }
+
+  const handleSaveInlineEdit = async (deviceId: string) => {
+    console.log("[v0] Saving inline edit for device:", deviceId)
+    console.log("[v0] Edited data:", editingRowData)
+
+    setSaving(true)
+
+    const formData = new FormData()
+    formData.append("brand", editingRowData.brand || "")
+    formData.append("model", editingRowData.model || "")
+    formData.append("variant", editingRowData.variant || "")
+    formData.append("category", editingRowData.category || "")
+    formData.append("basePrice", editingRowData.base_price?.toString() || "0")
+    formData.append("releaseYear", editingRowData.release_year?.toString() || "2024")
+
+    // Keep current image
+    const device = devices.find((d) => d.id === deviceId)
+    if (device?.image_url) {
+      formData.append("currentImageUrl", device.image_url)
+    }
+
+    console.log("[v0] Calling updateProduct with FormData")
+    const result = await updateProduct(deviceId, formData)
+    console.log("[v0] Update result:", result)
+
+    if (result.success) {
+      toast({
+        title: "Produkt aktualisiert",
+        description: "Die Änderungen wurden erfolgreich in der Datenbank gespeichert.",
+      })
+      console.log("[v0] Reloading data from database...")
+      await loadData()
+      setEditingRowId(null)
+      setEditingRowData({})
+    } else {
+      toast({
+        title: "Fehler beim Speichern",
+        description: result.error || "Die Änderungen konnten nicht gespeichert werden.",
+        variant: "destructive",
+      })
+    }
+
+    setSaving(false)
   }
 
   const getAvailableYears = () => {
@@ -174,25 +264,36 @@ export default function ProduktePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
+        {/* Header */}
         <div className="mb-8">
           <Link
             href="/admin"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Zurück zum Dashboard
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-2">Produktverwaltung</h1>
-              <p className="text-lg text-muted-foreground">Produkte hinzufügen, bearbeiten und löschen</p>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mb-2">
+                Produktverwaltung
+              </h1>
+              <p className="text-lg text-muted-foreground">Verwalten Sie Ihre Produkte direkt in der Datenbank</p>
             </div>
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button onClick={() => setEditingDevice(null)}>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button
+                  size="lg"
+                  className="shadow-lg hover:shadow-xl transition-shadow"
+                  onClick={() => {
+                    setEditingDevice(null)
+                    setFormBrand("")
+                    setFormCategory("")
+                  }}
+                >
+                  <Plus className="h-5 w-5 mr-2" />
                   Neues Produkt
                 </Button>
               </DialogTrigger>
@@ -200,11 +301,18 @@ export default function ProduktePage() {
                 <DialogHeader>
                   <DialogTitle>{editingDevice ? "Produkt bearbeiten" : "Neues Produkt erstellen"}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4" key={editingDevice?.id || "new"}>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="brand">Marke *</Label>
-                      <Select name="brand" defaultValue={editingDevice?.brand} required>
+                      <Select
+                        value={formBrand}
+                        onValueChange={(value) => {
+                          console.log("[v0] Brand changed to:", value)
+                          setFormBrand(value)
+                        }}
+                        required
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Marke wählen" />
                         </SelectTrigger>
@@ -216,10 +324,18 @@ export default function ProduktePage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <input type="hidden" name="brand" value={formBrand} />
                     </div>
                     <div>
                       <Label htmlFor="category">Kategorie *</Label>
-                      <Select name="category" defaultValue={editingDevice?.category} required>
+                      <Select
+                        value={formCategory}
+                        onValueChange={(value) => {
+                          console.log("[v0] Category changed to:", value)
+                          setFormCategory(value)
+                        }}
+                        required
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Kategorie wählen" />
                         </SelectTrigger>
@@ -231,6 +347,7 @@ export default function ProduktePage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <input type="hidden" name="category" value={formCategory} />
                     </div>
                   </div>
 
@@ -241,6 +358,7 @@ export default function ProduktePage() {
                       name="model"
                       defaultValue={editingDevice?.model}
                       placeholder="z.B. iPhone 16 Pro Max"
+                      onChange={(e) => console.log("[v0] Model changed to:", e.target.value)}
                       required
                     />
                   </div>
@@ -252,6 +370,7 @@ export default function ProduktePage() {
                       name="variant"
                       defaultValue={editingDevice?.variant || ""}
                       placeholder="z.B. 256GB, Schwarz"
+                      onChange={(e) => console.log("[v0] Variant changed to:", e.target.value)}
                     />
                   </div>
 
@@ -266,6 +385,7 @@ export default function ProduktePage() {
                         min="0"
                         defaultValue={editingDevice?.base_price}
                         placeholder="999.99"
+                        onChange={(e) => console.log("[v0] Base price changed to:", e.target.value)}
                         required
                       />
                     </div>
@@ -279,6 +399,7 @@ export default function ProduktePage() {
                         max="2030"
                         defaultValue={editingDevice?.release_year}
                         placeholder="2024"
+                        onChange={(e) => console.log("[v0] Release year changed to:", e.target.value)}
                         required
                       />
                     </div>
@@ -345,7 +466,7 @@ export default function ProduktePage() {
         </div>
 
         {/* Filters */}
-        <Card className="p-6 mb-6">
+        <Card className="p-6 mb-6 shadow-lg border-2">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -420,125 +541,298 @@ export default function ProduktePage() {
           </div>
         </Card>
 
-        {/* Results */}
-        <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {totalCount} {totalCount === 1 ? "Produkt gefunden" : "Produkte gefunden"}
-              {totalPages > 1 && ` • Seite ${currentPage} von ${totalPages}`}
-            </p>
+        <Card className="shadow-xl border-2">
+          <div className="p-6 border-b bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Produktliste</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {totalCount} {totalCount === 1 ? "Produkt" : "Produkte"}
+                  {totalPages > 1 && ` • Seite ${currentPage} von ${totalPages}`}
+                </p>
+              </div>
+              {loading && (
+                <Badge variant="secondary" className="animate-pulse">
+                  Lädt...
+                </Badge>
+              )}
+            </div>
           </div>
 
           {loading ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Lade Produkte...</p>
+            <div className="text-center py-16">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent mb-4" />
+              <p className="text-muted-foreground">Lade Produkte aus der Datenbank...</p>
             </div>
           ) : filteredDevices.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Keine Produkte gefunden</p>
+            <div className="text-center py-16">
+              <ImageIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg font-medium mb-2">Keine Produkte gefunden</p>
+              <p className="text-sm text-muted-foreground">
+                Versuchen Sie, Ihre Suchfilter anzupassen oder ein neues Produkt zu erstellen.
+              </p>
             </div>
           ) : (
-            <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Bild</TableHead>
-                      <TableHead>Marke</TableHead>
-                      <TableHead>Modell</TableHead>
-                      <TableHead>Variante</TableHead>
-                      <TableHead>Kategorie</TableHead>
-                      <TableHead>Preis</TableHead>
-                      <TableHead>Jahr</TableHead>
-                      <TableHead className="text-right">Aktionen</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredDevices.map((device) => (
-                      <TableRow key={device.id}>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="w-[100px]">Bild</TableHead>
+                    <TableHead>Marke</TableHead>
+                    <TableHead>Modell</TableHead>
+                    <TableHead>Kategorie</TableHead>
+                    <TableHead className="text-right">Preis</TableHead>
+                    <TableHead className="text-center">Jahr</TableHead>
+                    <TableHead>Variante</TableHead>
+                    <TableHead className="text-right">Aktionen</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredDevices.map((device) => {
+                    const isEditing = editingRowId === device.id
+
+                    return (
+                      <TableRow
+                        key={device.id}
+                        className={`transition-colors ${isEditing ? "bg-primary/5 border-l-4 border-l-primary" : "hover:bg-muted/50"}`}
+                      >
+                        {/* Image */}
                         <TableCell>
-                          {device.image_url ? (
-                            <img
-                              src={device.image_url || "/placeholder.svg"}
-                              alt={device.model}
-                              className="w-12 h-12 object-contain"
+                          <div className="flex justify-center">
+                            {device.image_url ? (
+                              <img
+                                src={device.image_url || "/placeholder.svg"}
+                                alt={device.model}
+                                className="w-16 h-16 object-contain rounded-lg border-2"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center border-2">
+                                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* Brand */}
+                        <TableCell>
+                          {isEditing ? (
+                            <Select
+                              value={editingRowData.brand}
+                              onValueChange={(value) => {
+                                console.log("[v0] Inline edit - brand changed to:", value)
+                                setEditingRowData({ ...editingRowData, brand: value })
+                              }}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {brands.map((brand) => (
+                                  <SelectItem key={brand.id} value={brand.name}>
+                                    {brand.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="font-semibold">{device.brand}</div>
+                          )}
+                        </TableCell>
+
+                        {/* Model */}
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingRowData.model}
+                              onChange={(e) => {
+                                console.log("[v0] Inline edit - model changed to:", e.target.value)
+                                setEditingRowData({ ...editingRowData, model: e.target.value })
+                              }}
+                              className="h-9"
                             />
                           ) : (
-                            <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
-                              <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                            <div className="font-medium">{device.model}</div>
+                          )}
+                        </TableCell>
+
+                        {/* Category */}
+                        <TableCell>
+                          {isEditing ? (
+                            <Select
+                              value={editingRowData.category}
+                              onValueChange={(value) => {
+                                console.log("[v0] Inline edit - category changed to:", value)
+                                setEditingRowData({ ...editingRowData, category: value })
+                              }}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map((cat) => (
+                                  <SelectItem key={cat.id} value={cat.name}>
+                                    {cat.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant="secondary" className="font-medium">
+                              {categories.find((c) => c.name === device.category)?.label || device.category}
+                            </Badge>
+                          )}
+                        </TableCell>
+
+                        {/* Price */}
+                        <TableCell className="text-right">
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editingRowData.base_price}
+                              onChange={(e) => {
+                                const newPrice = Number.parseFloat(e.target.value)
+                                console.log("[v0] Inline edit - price changed to:", newPrice)
+                                setEditingRowData({ ...editingRowData, base_price: newPrice })
+                              }}
+                              className="h-9 text-right"
+                            />
+                          ) : (
+                            <div className="font-bold text-lg text-primary">{device.base_price.toFixed(2)}€</div>
+                          )}
+                        </TableCell>
+
+                        {/* Year */}
+                        <TableCell className="text-center">
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              min="2000"
+                              max="2030"
+                              value={editingRowData.release_year}
+                              onChange={(e) => {
+                                const newYear = Number.parseInt(e.target.value)
+                                console.log("[v0] Inline edit - year changed to:", newYear)
+                                setEditingRowData({ ...editingRowData, release_year: newYear })
+                              }}
+                              className="h-9 text-center"
+                            />
+                          ) : (
+                            <Badge variant="outline">{device.release_year}</Badge>
+                          )}
+                        </TableCell>
+
+                        {/* Variant */}
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingRowData.variant || ""}
+                              onChange={(e) => {
+                                console.log("[v0] Inline edit - variant changed to:", e.target.value)
+                                setEditingRowData({ ...editingRowData, variant: e.target.value })
+                              }}
+                              className="h-9"
+                              placeholder="-"
+                            />
+                          ) : (
+                            <div className="text-sm text-muted-foreground">{device.variant || "-"}</div>
+                          )}
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell className="text-right">
+                          {isEditing ? (
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleSaveInlineEdit(device.id)}
+                                disabled={saving}
+                                className="shadow-md"
+                              >
+                                <Check className="h-4 w-4 mr-1" />
+                                Speichern
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={handleCancelInlineEdit} disabled={saving}>
+                                <X className="h-4 w-4 mr-1" />
+                                Abbrechen
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleInlineEdit(device)}
+                                title="Bearbeiten"
+                                className="hover:bg-primary/10"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(device.id)}
+                                title="Löschen"
+                                className="hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="font-medium">{device.brand}</TableCell>
-                        <TableCell>{device.model}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{device.variant || "-"}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {categories.find((c) => c.name === device.category)?.label || device.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-semibold">{device.base_price}€</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{device.release_year}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(device)}>
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(device.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
-              {totalPages > 1 && (
-                <div className="mt-6 flex justify-center">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="p-6 border-t bg-muted/30">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum
+                    if (totalPages <= 5) {
+                      pageNum = i + 1
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i
+                    } else {
+                      pageNum = currentPage - 2 + i
+                    }
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(pageNum)}
+                          isActive={currentPage === pageNum}
+                          className="cursor-pointer"
+                        >
+                          {pageNum}
+                        </PaginationLink>
                       </PaginationItem>
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum
-                        if (totalPages <= 5) {
-                          pageNum = i + 1
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i
-                        } else {
-                          pageNum = currentPage - 2 + i
-                        }
-                        return (
-                          <PaginationItem key={pageNum}>
-                            <PaginationLink
-                              onClick={() => setCurrentPage(pageNum)}
-                              isActive={currentPage === pageNum}
-                              className="cursor-pointer"
-                            >
-                              {pageNum}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                      })}
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
-            </>
+                    )
+                  })}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </Card>
       </div>
