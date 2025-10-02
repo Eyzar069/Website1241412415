@@ -1,0 +1,21 @@
+id,category,brand,model,storage,base_price,release_year,image_url
+iphone-17-256gb,smartphone,apple,iPhone 17,256GB,650,2025,/placeholder.svg?height=400&width=400&query=iPhone+17
+iphone-17-512gb,smartphone,apple,iPhone 17,512GB,720,2025,/placeholder.svg?height=400&width=400&query=iPhone+17
+iphone-17-air-256gb,smartphone,apple,iPhone 17 Air,256GB,750,2025,/placeholder.svg?height=400&width=400&query=iPhone+17+Air+ultra+thin
+iphone-17-air-512gb,smartphone,apple,iPhone 17 Air,512GB,820,2025,/placeholder.svg?height=400&width=400&query=iPhone+17+Air+ultra+thin
+iphone-17-air-1tb,smartphone,apple,iPhone 17 Air,1TB,950,2025,/placeholder.svg?height=400&width=400&query=iPhone+17+Air+ultra+thin
+iphone-17-pro-256gb,smartphone,apple,iPhone 17 Pro,256GB,850,2025,/placeholder.svg?height=400&width=400&query=iPhone+17+Pro
+iphone-17-pro-512gb,smartphone,apple,iPhone 17 Pro,512GB,920,2025,/placeholder.svg?height=400&width=400&query=iPhone+17+Pro
+iphone-17-pro-1tb,smartphone,apple,iPhone 17 Pro,1TB,1050,2025,/placeholder.svg?height=400&width=400&query=iPhone+17+Pro
+iphone-17-pro-max-256gb,smartphone,apple,iPhone 17 Pro Max,256GB,950,2025,/placeholder.svg?height=400&width=400&query=iPhone+17+Pro+Max
+iphone-17-pro-max-512gb,smartphone,apple,iPhone 17 Pro Max,512GB,1020,2025,/placeholder.svg?height=400&width=400&query=iPhone+17+Pro+Max
+iphone-17-pro-max-1tb,smartphone,apple,iPhone 17 Pro Max,1TB,1150,2025,/placeholder.svg?height=400&width=400&query=iPhone+17+Pro+Max
+iphone-17-pro-max-2tb,smartphone,apple,iPhone 17 Pro Max,2TB,1350,2025,/placeholder.svg?height=400&width=400&query=iPhone+17+Pro+Max
+samsung-s25-128gb,smartphone,samsung,Galaxy S25,128GB,450,2025,/placeholder.svg?height=400&width=400&query=Samsung+Galaxy+S25
+samsung-s25-256gb,smartphone,samsung,Galaxy S25,256GB,520,2025,/placeholder.svg?height=400&width=400&query=Samsung+Galaxy+S25
+samsung-s25-512gb,smartphone,samsung,Galaxy S25,512GB,600,2025,/placeholder.svg?height=400&width=400&query=Samsung+Galaxy+S25
+samsung-s25-plus-256gb,smartphone,samsung,Galaxy S25+,256GB,650,2025,/placeholder.svg?height=400&width=400&query=Samsung+Galaxy+S25+Plus
+samsung-s25-plus-512gb,smartphone,samsung,Galaxy S25+,512GB,720,2025,/placeholder.svg?height=400&width=400&query=Samsung+Galaxy+S25+Plus
+samsung-s25-ultra-256gb,smartphone,samsung,Galaxy S25 Ultra,256GB,800,2025,/placeholder.svg?height=400&width=400&query=Samsung+Galaxy+S25+Ultra
+samsung-s25-ultra-512gb,smartphone,samsung,Galaxy S25 Ultra,512GB,880,2025,/placeholder.svg?height=400&width=400&query=Samsung+Galaxy+S25+Ultra
+samsung-s25-ultra-1tb,smartphone,samsung,Galaxy S25 Ultra,1TB,1000,2025,/placeholder.svg?height=400&width=400&query=Samsung+Galaxy+S25+Ultra
