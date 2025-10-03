@@ -1,23 +1,54 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/client"
 import { UserNav } from "@/components/user-nav"
+import type { User } from "@supabase/supabase-js"
 
-export async function SiteHeader() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export function SiteHeader() {
+  const [user, setUser] = useState<User | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const supabase = createClient()
 
-  let isAdmin = false
-  if (user) {
-    const { data: adminCheck } = await supabase
-      .from("admin_emails")
-      .select("email")
-      .eq("email", user.email)
-      .maybeSingle()
-    isAdmin = !!adminCheck
-  }
+  useEffect(() => {
+    const checkAuth = async () => {
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser()
+      setUser(currentUser)
+
+      if (currentUser) {
+        const { data: adminCheck } = await supabase
+          .from("admin_emails")
+          .select("email")
+          .eq("email", currentUser.email)
+          .maybeSingle()
+        setIsAdmin(!!adminCheck)
+      }
+    }
+
+    checkAuth()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        supabase
+          .from("admin_emails")
+          .select("email")
+          .eq("email", session.user.email)
+          .maybeSingle()
+          .then(({ data }) => setIsAdmin(!!data))
+      } else {
+        setIsAdmin(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
