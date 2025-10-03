@@ -1,23 +1,61 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/server"
 import { UserNav } from "@/components/user-nav"
+import { createClient } from "@/lib/supabase/client"
+import { useEffect, useState } from "react"
+import type { User } from "@supabase/supabase-js"
 
-export async function SiteHeader() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export function SiteHeader() {
+  const [user, setUser] = useState<User | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  let isAdmin = false
-  if (user) {
-    const { data: adminCheck } = await supabase
-      .from("admin_emails")
-      .select("email")
-      .eq("email", user.email)
-      .maybeSingle()
-    isAdmin = !!adminCheck
-  }
+  useEffect(() => {
+    const supabase = createClient()
+
+    const loadUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      setUser(user)
+
+      if (user) {
+        const { data: adminCheck } = await supabase
+          .from("admin_emails")
+          .select("email")
+          .eq("email", user.email)
+          .maybeSingle()
+        setIsAdmin(!!adminCheck)
+      }
+
+      setLoading(false)
+    }
+
+    loadUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        supabase
+          .from("admin_emails")
+          .select("email")
+          .eq("email", session.user.email)
+          .maybeSingle()
+          .then(({ data }) => {
+            setIsAdmin(!!data)
+          })
+      } else {
+        setIsAdmin(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
@@ -52,7 +90,7 @@ export async function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-4">
-          {isAdmin && (
+          {!loading && isAdmin && (
             <Button
               asChild
               variant="outline"
@@ -63,9 +101,9 @@ export async function SiteHeader() {
             </Button>
           )}
 
-          {user ? (
+          {!loading && user ? (
             <UserNav user={user} />
-          ) : (
+          ) : !loading ? (
             <>
               <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex hover:text-primary">
                 <Link href="/auth/login">Anmelden</Link>
@@ -78,7 +116,7 @@ export async function SiteHeader() {
                 <Link href="/verkaufen">Jetzt verkaufen</Link>
               </Button>
             </>
-          )}
+          ) : null}
         </div>
       </div>
     </header>
