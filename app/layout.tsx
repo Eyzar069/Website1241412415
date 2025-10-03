@@ -22,11 +22,11 @@ export default function RootLayout({
   return (
     <html lang="de" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="antialiased">
+        <SiteHeader />
         <PasswordProtection>
-          <SiteHeader />
           <main>{children}</main>
-          <SiteFooter />
         </PasswordProtection>
+        <SiteFooter />
       </body>
     </html>
   )
